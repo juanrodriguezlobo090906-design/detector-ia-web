@@ -1,82 +1,50 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 import os
-import cv2
-import numpy as np
+from ai_detector import analyze_image
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "uploads"
-RESULT_FOLDER = "results"
-
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["RESULT_FOLDER"] = RESULT_FOLDER
 
-@app.route("/")
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template("index.html")
 
-@app.route("/upload", methods=["POST"])
-def upload():
-    if "image" not in request.files:
-        return "No se subió ninguna imagen"
+    score = None
+    filename = None
 
-    file = request.files["image"]
-    if file.filename == "":
-        return "No se seleccionó archivo"
+    if request.method == "POST":
 
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-    file.save(filepath)
+        if "image" not in request.files:
+            return render_template("index.html")
 
-    # --- Leer imagen ---
-    img = cv2.imread(filepath)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        file = request.files["image"]
 
-    # --- ANALISIS DE BORDES ---
-    edges = cv2.Canny(gray, 100, 200)
-    edge_density = np.mean(edges)
+        if file.filename == "":
+            return render_template("index.html")
 
-    # --- ANALISIS DE RUIDO ---
-    noise = np.std(gray)
+        if file and allowed_file(file.filename):
 
-    # --- ANALISIS DE TEXTURA ---
-    texture = np.mean(cv2.Laplacian(gray, cv2.CV_64F))
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
 
-    # --- SCORE FINAL ---
-    score = (edge_density*0.4) + (noise*0.3) + (texture*0.3)
-    probabilidad = int((score/255)*100)
-    probabilidad = max(5, min(probabilidad, 95))  # evita 0% o >95%
+            file.save(filepath)
 
-    # --- HEATMAP FORENSE ---
-    hf = cv2.subtract(gray, cv2.GaussianBlur(gray, (3,3), 0))
-    hf = cv2.normalize(hf, None, 0, 255, cv2.NORM_MINMAX)
-    heatmap = cv2.applyColorMap(hf, cv2.COLORMAP_JET)
-    overlay = cv2.addWeighted(img, 0.6, heatmap, 0.4, 0)
+            score = analyze_image(filepath)
 
-    # --- DETECCION DE ROSTROS ---
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    for (x,y,w,h) in faces:
-        cv2.rectangle(overlay, (x,y), (x+w, y+h), (0,0,255), 2)
+            filename = file.filename
 
-    # --- GUARDAR HEATMAP ---
-    result_image = os.path.join(app.config["RESULT_FOLDER"], file.filename)
-    cv2.imwrite(result_image, overlay)
+    return render_template("index.html", score=score, filename=filename)
 
-    result = f"{probabilidad}% de probabilidad de que la imagen sea generada por IA"
-
-    return render_template("index.html",
-                           result=result,
-                           filename=file.filename,
-                           result_image=file.filename)
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-@app.route('/results/<filename>')
-def result_file(filename):
-    return send_from_directory(app.config['RESULT_FOLDER'], filename)
 
 if __name__ == "__main__":
-    # Ejecutar Flask en localhost y puerto 5000
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)
