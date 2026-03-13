@@ -1,0 +1,11 @@
+flask
+torch
+torchvision
+torchaudio
+transformers
+opencv-python
+opencv-contrib-python
+numpy
+Pillow
+scikit-image
+matplotlib

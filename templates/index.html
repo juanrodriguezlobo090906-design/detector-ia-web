@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Detector de Imágenes IA</title>
+<style>
+body{font-family: Arial;background:#0f172a;color:white;text-align:center;padding:40px;}
+h1{color:#38bdf8;}
+.box{background:#1e293b;padding:30px;border-radius:10px;width:400px;margin:auto;}
+button{background:#38bdf8;border:none;padding:10px 20px;font-size:16px;cursor:pointer;border-radius:5px;}
+img{margin-top:20px;width:300px;border-radius:8px;}
+.result{margin-top:20px;font-size:20px;color:#22c55e;}
+</style>
+</head>
+<body>
+<h1>Detector de Imágenes Generadas por IA</h1>
+<div class="box">
+<form action="/upload" method="post" enctype="multipart/form-data">
+<input type="file" name="image" required><br><br>
+<button type="submit">Analizar Imagen</button>
+</form>
+{% if result %}
+<div class="result">{{ result }}</div>
+<h3>Imagen Analizada</h3>
+<img src="/uploads/{{ filename }}">
+<h3>Zonas Sospechosas Detectadas</h3>
+<img src="/results/{{ result_image }}">
+{% endif %}
+</div>
+</body>
+</html>

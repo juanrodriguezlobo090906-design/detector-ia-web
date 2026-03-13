@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Detector de Imágenes IA</title>
+</head>
+
+<body>
+
+<h2>Detector de Imágenes Generadas por IA</h2>
+
+<form method="POST" enctype="multipart/form-data">
+<input type="file" name="image" required>
+<button type="submit">Subir imagen</button>
+</form>
+
+{% if image_name %}
+<h3>Imagen cargada:</h3>
+<img src="/uploads/{{image_name}}" width="300">
+{% endif %}
+
+</body>
+</html>
